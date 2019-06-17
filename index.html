@@ -1,0 +1,165 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>旅行日志</title>
+    <link rel="stylesheet" href="js/layui/css/layui.css">
+    <script src="js/layui/layui.all.js"></script>
+    <script src="js/jquery-1.11.1.min.js"></script>
+    <script src="js/echarts.min.js"></script>
+    <script src="js/china.js"></script>
+    <script src="js/jquery.media.js"></script>
+</head>
+
+<body>
+    <div id="container" style="height: 800px;width:1200px;background:white;margin:20px 0 0;"></div>
+    <div style="position:fixed; right: 0px; top:0px">
+        <div id="resume"></div>
+    </div>
+    
+    <!-- 点击事件弹出的表单 -->
+    <form id="submit" class="layui-form" action="">
+        <div style="height:10px"></div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">时间</label>
+            <div class="layui-input-block">
+                <input style="width: 260px;" type="text" name="time" class="layui-input" id="test1">
+            </div>
+        </div>
+        <div class="layui-form-item layui-form-text">
+            <label class="layui-form-label">计划</label>
+            <div class="layui-input-block">
+                <textarea style="width: 280px;" name="remark" placeholder="请输入内容" class="layui-textarea"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button class="layui-btn" lay-submit lay-filter="formDemo">立即提交</button>
+            </div>
+        </div>
+    </form>
+    <script type="text/javascript">
+        $("#submit").hide();
+        var province = "";
+        layui.use(['laydate', 'form'], function () {
+            var laydate = layui.laydate;
+            var form = layui.form;
+            laydate.render({
+                elem: '#test1'
+            });
+            //新增计划
+            form.on('submit(formDemo)', function (data) {
+                console.log(data.field);
+                var time = data.field.time,
+                    remark = data.field.remark;
+                $.ajax({
+                    type: 'POST',
+                    url: "getdata.php",
+                    data: { type: "submit", time: time, remark: remark, name: province },
+                    success: function (data) {
+                        window.location.reload();
+                    }
+                });
+                return false;
+            });
+        });
+
+        var dataMap = [];
+        $.ajax({
+            type: 'POST',
+            url: "getdata.php",
+            data: { type: "get" },
+            success: function (data) {
+                var get_data = JSON.parse(data);
+                var dataMap = get_data.province;
+                var specialMap = get_data.isgo;
+                //标记去过的省份
+                for (var i = 0; i < specialMap.length; i++) {
+                    for (var j = 0; j < dataMap.length; j++) {
+                        if (specialMap[i] == dataMap[j].name) {
+                            dataMap[j].selected = true;
+                            break;
+                        }
+
+                    }
+                }
+                // 绘制图表，准备数据
+                var option = {
+                    tooltip: {
+                        formatter: function (params) {
+                            var info = '<p style="font-size:18px">' + params.name + '</p><p style="font-size:14px">' + params.data.flag + params.data.went_time + '</p><p style="font-size:14px">' +
+                                params.data.remark + '</p>';
+                            return info;
+                        },
+                        backgroundColor: "#ff7f50",//提示标签背景颜色
+                        textStyle: { color: "#fff" } //提示标签字体颜色
+                    },
+                    series: [
+                        {
+                            name: '中国',
+                            type: 'map',
+                            mapType: 'china',
+                            //selectedMode: 'multiple',
+                            label: {
+                                normal: {
+                                    show: true,//显示省份标签
+                                    // textStyle:{color:"#c71585"}//省份标签字体颜色
+                                },
+                                emphasis: {
+                                    show: true,//对应的鼠标悬浮效果
+                                    // textStyle:{color:"#800080"}
+                                }
+                            },
+                            itemStyle: {
+                                normal: {
+                                    borderWidth: .5,//区域边框宽度
+                                    // borderColor: '#009fe8',//区域边框颜色
+                                    // areaColor:"#ffefd5",//区域颜色
+                                },
+                                emphasis: {
+                                    borderWidth: .5,
+                                    borderColor: '#4b0082',
+                                    areaColor: "#ffdead",
+                                }
+                            },
+                            data: dataMap
+                        }
+                    ]
+                };
+                //初始化echarts实例
+                var myChart = echarts.init(document.getElementById('container'));
+                myChart.setOption(option);
+                myChart.on('click', function (param) {
+                    console.log(param);
+                    province = param.name;
+                    if (param.data.isgo == 1) {
+                        layer.msg("不可以再做计划了！");
+                    } else {
+                        $("#submit").show();
+                        layer.open({
+                            type: 1,
+                            title: "添加计划",
+                            skin: 'layui-layer-rim', //加上边框
+                            area: ['470px', '290px'], //宽高
+                            content: $("#submit"),
+                            cancel: function (index, layero) {
+                                $("#submit").hide();
+                            }
+                        });
+                    }
+                })
+            }
+        });
+
+        $('#resume').media({
+            width: '700px',
+            height: '900px',
+            autoplay: true,
+            src: 'resume.pdf',
+        });
+
+    </script>
+</body>
+
+</html>
